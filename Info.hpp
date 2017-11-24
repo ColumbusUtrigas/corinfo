@@ -12,7 +12,7 @@ namespace Columbus
 	int GetCPUCount();
 	int GetCPUCacheSize();
 	unsigned long GetRAMSize();
-	unsigned long GetRamAvaliable();
+	unsigned long GetRAMFree();
 
 	int GetCPUCount()
 	{
@@ -63,6 +63,15 @@ namespace Columbus
 			struct sysinfo info;
 			if (sysinfo(&info) == -1) return 0;
 			return info.totalram;
+		#endif
+	}
+
+	unsigned long GetRAMFree()
+	{
+		#ifdef __linux__
+			struct sysinfo info;
+			if (sysinfo(&info) == -1) return 0;
+			return info.freeram;
 		#endif
 	}
 
