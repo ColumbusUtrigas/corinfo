@@ -1,13 +1,18 @@
 #include <cstdlib>
 #include <fstream>
 #include <string>
-#include <iostream>
+
+#ifdef __linux__
+	#include <sys/sysinfo.h>
+#endif
 
 namespace Columbus
 {
 
 	int GetCPUCount();
 	int GetCPUCacheSize();
+	unsigned long GetRAMSize();
+	unsigned long GetRamAvaliable();
 
 	int GetCPUCount()
 	{
@@ -49,6 +54,15 @@ namespace Columbus
 
 			cpuinfo.close();
 			return 0;
+		#endif
+	}
+
+	unsigned long GetRAMSize()
+	{
+		#ifdef __linux__
+			struct sysinfo info;
+			if (sysinfo(&info) == -1) return 0;
+			return info.totalram;
 		#endif
 	}
 
