@@ -11,6 +11,8 @@ namespace Columbus
 
 	int GetCPUCount();
 	int GetCPUCacheSize();
+	int GetCPUUsage();
+	int GetCPUTemperature();
 	unsigned long GetRAMSize();
 	unsigned long GetRAMFree();
 
@@ -54,6 +56,15 @@ namespace Columbus
 
 			cpuinfo.close();
 			return 0;
+		#endif
+	}
+
+	int GetCPUUsage()
+	{
+		#ifdef __linux__
+			double load[3];
+			getloadavg(load, 3);
+			return static_cast<int>(load[0] * 100);
 		#endif
 	}
 
