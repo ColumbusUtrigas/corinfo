@@ -31,6 +31,10 @@ namespace Columbus
 	unsigned long GetRAMFree();
 	unsigned long GetRAMThis();
 	int GetRAMUsage();
+	unsigned long GetGPUMemorySize();
+	unsigned long GetGPUMemoryFree();
+	int GetGPUUsage();
+	int GetGPUMemoryUsage();
 	float GetGPUTemperature();
 
 	int GetCPUCount()
@@ -152,7 +156,8 @@ namespace Columbus
 		#endif
 
 		#ifdef COLUMBUS_PLATFORM_WINDOWS
-			
+			BSTR strClassProp = SysAllocString(L"CurrentTemperature");
+			std::cout << strClassProp << std::endl;
 		#endif
 
 		return 0;
@@ -215,6 +220,20 @@ namespace Columbus
 		#endif
 
 		return 0;
+	}
+
+	unsigned long GetGPUMemorySize()
+	{
+		#ifdef COLUMBUS_PLATFORM_WINDOWS
+			
+		#endif
+
+		return 0;
+	}
+
+	unsigned long GetGPUMemoryFree()
+	{
+
 	}
 
 	float GetGPUTemperature()
