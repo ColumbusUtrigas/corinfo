@@ -1,9 +1,23 @@
 #include <cstdlib>
 #include <fstream>
 #include <string>
+#include <iostream>
 
 #ifdef __linux__
 	#include <sys/sysinfo.h>
+#endif
+
+#ifdef _WIN32
+	#define COLUMBUS_PLATFORM_WINDOWS
+#endif
+
+#ifdef _WIN64
+	#define COLUMBUS_PLATFORM_WINDOWS
+#endif
+
+#ifdef COLUMBUS_PLATFORM_WINDOWS
+	#include <windows.h>
+	#include <psapi.h>
 #endif
 
 namespace Columbus
@@ -15,6 +29,8 @@ namespace Columbus
 	float GetCPUTemperature();
 	unsigned long GetRAMSize();
 	unsigned long GetRAMFree();
+	unsigned long GetRAMThis();
+	int GetRAMUsage();
 	float GetGPUTemperature();
 
 	int GetCPUCount()
@@ -35,6 +51,14 @@ namespace Columbus
 			cpuinfo.close();
 			return counter;
 		#endif
+
+		#ifdef COLUMBUS_PLATFORM_WINDOWS
+			SYSTEM_INFO sysinfo;
+			GetSystemInfo(&sysinfo);
+			return sysinfo.dwNumberOfProcessors;
+		#endif
+
+		return 0;
 	}
 
 	int GetCPUCacheSize()
@@ -58,6 +82,12 @@ namespace Columbus
 			cpuinfo.close();
 			return 0;
 		#endif
+
+		#ifdef COLUMBUS_PLATFORM_WINDOWS
+			
+		#endif	
+
+		return 0;
 	}
 
 	int GetCPUUsage()
@@ -67,6 +97,12 @@ namespace Columbus
 			getloadavg(load, 3);
 			return static_cast<int>(load[0] * 100);
 		#endif
+
+		#ifdef COLUMBUS_PLATFORM_WINDOWS
+
+		#endif
+
+		return 0;
 	}
 
 	float GetCPUTemperature()
@@ -114,6 +150,12 @@ namespace Columbus
 			return 0.0;
 
 		#endif
+
+		#ifdef COLUMBUS_PLATFORM_WINDOWS
+			
+		#endif
+
+		return 0;
 	}
 
 	unsigned long GetRAMSize()
@@ -123,6 +165,15 @@ namespace Columbus
 			if (sysinfo(&info) == -1) return 0;
 			return info.totalram;
 		#endif
+
+		#ifdef COLUMBUS_PLATFORM_WINDOWS
+			MEMORYSTATUSEX memInfo;
+			memInfo.dwLength = sizeof(memInfo);
+			GlobalMemoryStatusEx(&memInfo);
+			return memInfo.ullTotalPhys / (1024 * 1024);
+		#endif	
+
+		return 0;
 	}
 
 	unsigned long GetRAMFree()
@@ -132,6 +183,38 @@ namespace Columbus
 			if (sysinfo(&info) == -1) return 0;
 			return info.freeram;
 		#endif
+
+		#ifdef COLUMBUS_PLATFORM_WINDOWS
+			MEMORYSTATUSEX memInfo;
+			memInfo.dwLength = sizeof(memInfo);
+			GlobalMemoryStatusEx(&memInfo);
+			return memInfo.ullAvailPhys / (1024 * 1024);
+		#endif	
+
+		return 0;
+	}
+
+	unsigned long GetRAMThis()
+	{
+		#ifdef COLUMBUS_PLATFORM_WINDOWS
+			PROCESS_MEMORY_COUNTERS meminfo;
+			GetProcessMemoryInfo(GetCurrentProcess(), &meminfo, sizeof(meminfo));
+			return meminfo.WorkingSetSize / (1024 * 1024);
+		#endif
+
+		return 0;
+	}
+
+	int GetRAMUsage()
+	{
+		#ifdef COLUMBUS_PLATFORM_WINDOWS
+			MEMORYSTATUSEX memInfo;
+			memInfo.dwLength = sizeof(memInfo);
+			GlobalMemoryStatusEx(&memInfo);
+			return memInfo.dwMemoryLoad;
+		#endif
+
+		return 0;
 	}
 
 	float GetGPUTemperature()
@@ -179,6 +262,8 @@ namespace Columbus
 			return 0.0;
 
 		#endif
+
+		return 0;
 	}
 
 }
