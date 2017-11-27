@@ -142,7 +142,7 @@ namespace Columbus
 		#ifdef __linux__
 			struct sysinfo info;
 			if (sysinfo(&info) == -1) return 0;
-			return info.totalram;
+			return info.totalram / (1024 * 1024);
 		#endif
 
 		#ifdef COLUMBUS_PLATFORM_WINDOWS
@@ -160,7 +160,7 @@ namespace Columbus
 		#ifdef __linux__
 			struct sysinfo info;
 			if (sysinfo(&info) == -1) return 0;
-			return info.freeram;
+			return info.freeram / (1024 * 1024);
 		#endif
 
 		#ifdef COLUMBUS_PLATFORM_WINDOWS
@@ -186,6 +186,13 @@ namespace Columbus
 
 	int GetRAMUsage()
 	{
+		#ifdef __linux__
+			struct sysinfo info;
+			if (sysinfo(&info) == -1) return 0;
+			float usage = static_cast<float>(GetRAMFree()) / static_cast<float>(GetRAMSize());
+			return static_cast<int>(100 - usage * 100);
+		#endif
+
 		#ifdef COLUMBUS_PLATFORM_WINDOWS
 			MEMORYSTATUSEX memInfo;
 			memInfo.dwLength = sizeof(memInfo);
