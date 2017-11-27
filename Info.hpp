@@ -182,14 +182,14 @@ namespace Columbus
 
 		   	while (fgets(line, 512, fp) != NULL)
 		   	{
-	        	if (strncmp(line, "VmRSS:", 6) == 0)
-	        	{
-	        		fclose(fp);
-	        		std::string l = line;
-	        		l = l.substr(6, l.size() - 4);
-	        		return atoi(l.c_str()) / 1024;
-	        	}
-	    	}
+				if (strncmp(line, "VmRSS:", 6) == 0)
+				{
+					fclose(fp);
+					std::string l = line;
+					l = l.substr(6, l.size() - 4);
+					return atoi(l.c_str()) / 1024;
+				}
+			}
 
 
 		   	fclose(fp);
