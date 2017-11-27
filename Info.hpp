@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <string>
 #include <iostream>
@@ -175,6 +176,25 @@ namespace Columbus
 
 	unsigned long GetRAMThis()
 	{
+		#ifdef __linux__
+		   	FILE* fp = fopen("/proc/self/status", "r");
+		   	char line[512];
+
+		   	while (fgets(line, 512, fp) != NULL)
+		   	{
+	        	if (strncmp(line, "VmRSS:", 6) == 0)
+	        	{
+	        		fclose(fp);
+	        		std::string l = line;
+	        		l = l.substr(6, l.size() - 4);
+	        		return atoi(l.c_str()) / 1024;
+	        	}
+	    	}
+
+
+		   	fclose(fp);
+		#endif
+
 		#ifdef COLUMBUS_PLATFORM_WINDOWS
 			PROCESS_MEMORY_COUNTERS meminfo;
 			GetProcessMemoryInfo(GetCurrentProcess(), &meminfo, sizeof(meminfo));
