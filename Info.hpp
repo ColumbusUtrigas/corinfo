@@ -31,11 +31,11 @@ namespace Columbus
 	unsigned long GetRAMFree();
 	unsigned long GetRAMThis();
 	int GetRAMUsage();
+	int GetGPUUsage();
+	float GetGPUTemperature();
 	unsigned long GetGPUMemorySize();
 	unsigned long GetGPUMemoryFree();
-	int GetGPUUsage();
 	int GetGPUMemoryUsage();
-	float GetGPUTemperature();
 
 	int GetCPUCount()
 	{
@@ -220,20 +220,6 @@ namespace Columbus
 		#endif
 
 		return 0;
-	}
-
-	unsigned long GetGPUMemorySize()
-	{
-		#ifdef COLUMBUS_PLATFORM_WINDOWS
-			
-		#endif
-
-		return 0;
-	}
-
-	unsigned long GetGPUMemoryFree()
-	{
-
 	}
 
 	float GetGPUTemperature()
