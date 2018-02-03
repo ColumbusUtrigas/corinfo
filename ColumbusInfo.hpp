@@ -4,8 +4,6 @@
 	#include <unistd.h>
 #endif
 
-#include <cstdlib>
-
 namespace Columbus
 {
 
