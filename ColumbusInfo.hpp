@@ -39,10 +39,24 @@ namespace Columbus
 			GetSystemInfo(&sysinfo);
 			return sysinfo.dwNumberOfProcessors;
 		#endif
+
+		return 0;
 	}
 
 	unsigned int Info::getCPUFrequency()
 	{
+		#ifdef COLUMBUS_PLATFORM_LINUX
+			std::ifstream f("/proc/cpuinfo");
+			if (!f.is_open()) return 0;
+			std::string line;
+
+			while (getline(f, line))
+			{
+				if (line.substr(0, 7) == "cpu MHz")
+					return atoi(line.substr(line.find(":") + 1).c_str());
+			}
+		#endif
+
 		#ifdef COLUMBUS_PLATFORM_WINDOWS
 			wchar_t Buffer[_MAX_PATH];
 			DWORD BufSize = _MAX_PATH;
@@ -63,18 +77,7 @@ namespace Columbus
 			return dwMHz;
 		#endif
 
-		#ifdef COLUMBUS_PLATFORM_LINUX
-			std::ifstream f("/proc/cpuinfo");
-			if (!f.is_open()) return 0;
-			std::string line;
-
-			while (getline(f, line))
-			{
-				if (line.substr(0, 7) == "cpu MHz")
-					return atoi(line.substr(line.find(":") + 1).c_str());
-			}
-
-		#endif
+		return 0;
 	}
 
 	unsigned long Info::getRAMSize()
@@ -91,6 +94,8 @@ namespace Columbus
 			GlobalMemoryStatusEx(&memInfo);
 			return memInfo.ullTotalPhys / (1024 * 1024);
 		#endif
+
+		return 0;
 	}
 
 	unsigned long Info::getRAMFree()
@@ -107,6 +112,8 @@ namespace Columbus
 			GlobalMemoryStatusEx(&memInfo);
 			return memInfo.ullAvailPhys / (1024 * 1024);
 		#endif
+
+		return 0;
 	}
 
 	int Info::getRAMUsage()
