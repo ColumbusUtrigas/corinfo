@@ -9,7 +9,10 @@
 	#include <unistd.h>
 #endif
 
+#include <cstdlib>
 #include <cstdio>
+#include <fstream>
+#include <string>
 
 namespace Columbus
 {
@@ -18,7 +21,7 @@ namespace Columbus
 	{
 	public:
 		static unsigned int getCPUCount();
-		static unsigned int getCPUSpeed();
+		static unsigned int getCPUFrequency();
 
 		static unsigned long getRAMSize();
 		static unsigned long getRAMFree();
@@ -38,7 +41,7 @@ namespace Columbus
 		#endif
 	}
 
-	unsigned int Info::getCPUSpeed()
+	unsigned int Info::getCPUFrequency()
 	{
 		#ifdef COLUMBUS_PLATFORM_WINDOWS
 			wchar_t Buffer[_MAX_PATH];
@@ -58,6 +61,19 @@ namespace Columbus
 
 			RegQueryValueEx(hKey, L"~MHz", NULL, NULL, (LPBYTE)&dwMHz, &BufSize);
 			return dwMHz;
+		#endif
+
+		#ifdef COLUMBUS_PLATFORM_LINUX
+			std::ifstream f("/proc/cpuinfo");
+			if (!f.is_open()) return 0;
+			std::string line;
+
+			while (getline(f, line))
+			{
+				if (line.substr(0, 7) == "cpu MHz")
+					return atoi(line.substr(line.find(":") + 1).c_str());
+			}
+
 		#endif
 	}
 
