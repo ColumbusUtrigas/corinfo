@@ -46,8 +46,8 @@
 
 struct corinfo
 {
-	uint32_t CpuCount;
-	uint32_t CpuFrequency;
+	uint32_t CpuCount;     //!< Number of CPU cores.
+	uint32_t CpuFrequency; //!< CPU frequency, in MHz.
 
 	uint8_t  VendorString[12];
 	uint8_t  BrandString[48];
@@ -60,11 +60,25 @@ struct corinfo
 	uint8_t SSE42;
 	uint8_t AVX;
 
-	uint32_t RamSize;
-	uint32_t RamFree;
-	uint32_t RamUsage;
+	uint32_t RamSize;   //!< Physical RAM size, in KB.
+	uint32_t RamFree;   //!< Available physical RAM size, in KB.
+	uint32_t RamUsage;  //!< A number between 0 and 100 that specifies the approximate percentage of physical memory that is in use.
 };
 
+/**
+* @brief Main library function.
+*
+* ## Example
+*
+* ```c
+* struct corinfo info;
+* if (corinfo_GetInfo(&info) == -1) error();
+*
+* ```
+*
+* @param info Pointer to corinfo struct to store data.
+* @return 0 in success, otherwise -1.
+*/
 int corinfo_GetInfo(struct corinfo* info);
 
 #ifdef __linux
@@ -200,3 +214,5 @@ void __extensions(int cpu[4], struct corinfo* info)
 #undef __cpuid
 
 #endif
+
+
