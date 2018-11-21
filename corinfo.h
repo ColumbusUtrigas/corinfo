@@ -73,7 +73,6 @@ struct corinfo
 * ```c
 * struct corinfo info;
 * if (corinfo_GetInfo(&info) == -1) error();
-*
 * ```
 *
 * @param info Pointer to corinfo struct to store data.
