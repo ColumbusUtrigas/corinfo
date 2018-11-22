@@ -52,45 +52,41 @@
 * @file corinfo.h
 */
 
-struct corinfo_cpu
-{
-	uint32_t Count;     //!< Number of CPU cores.
-	uint32_t Frequency; //!< CPU frequency, in MHz.
-
-	uint32_t Family;
-	uint32_t Model;
-
-	uint8_t Vendor[12];
-	uint8_t Name[48];
-
-	uint8_t MMX;
-	uint8_t SSE;
-	uint8_t SSE2;
-	uint8_t SSE3;
-	uint8_t SSE41;
-	uint8_t SSE42;
-	uint8_t AVX;
-};
-
-struct corinfo_ram
-{
-	uint64_t Total; //!< Physical RAM size, in KB.
-	uint64_t Free;  //!< Available physical RAM size, in KB.
-	uint32_t Usage; //!< A number between 0 and 100 that specifies the approximate percentage of physical memory that is in use.
-};
-
-struct corinfo_hdd
-{
-	uint64_t Total; //!< HDD size, in KB.
-	uint64_t Free;  //!< Available HDD size, in KB.
-	uint32_t Usage; //!< A number between 0 and 100 that specifies the approximate percentage of HDD memory that is in use.
-};
-
 struct corinfo
 {
-	struct corinfo_cpu Cpu;
-	struct corinfo_ram Ram;
-	struct corinfo_hdd Hdd;
+	struct
+	{
+		uint32_t Count;     //!< Number of CPU cores.
+		uint32_t Frequency; //!< CPU frequency, in MHz.
+
+		uint32_t Family;
+		uint32_t Model;
+
+		uint8_t Vendor[12];
+		uint8_t Name[48];
+
+		uint8_t MMX;
+		uint8_t SSE;
+		uint8_t SSE2;
+		uint8_t SSE3;
+		uint8_t SSE41;
+		uint8_t SSE42;
+		uint8_t AVX;
+	} Cpu;
+
+	struct
+	{
+		uint64_t Total; //!< Physical RAM size, in KB.
+		uint64_t Free;  //!< Available physical RAM size, in KB.
+		uint32_t Usage; //!< A number between 0 and 100 that specifies the approximate percentage of physical memory that is in use.
+	} Ram;
+
+	struct
+	{
+		uint64_t Total; //!< HDD size, in KB.
+		uint64_t Free;  //!< Available HDD size, in KB.
+		uint32_t Usage; //!< A number between 0 and 100 that specifies the approximate percentage of HDD memory that is in use.
+	} Hdd;
 };
 
 /**
