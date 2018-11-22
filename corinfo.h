@@ -212,18 +212,6 @@ static int __hdd_info(struct corinfo* info);
 
 		return 0;
 	}
-
-	int corinfo_GetInfo(struct corinfo* info)
-	{
-		if (info == NULL) return -1;
-		*info = (struct corinfo) { 0 };
-
-		if (__cpu_info(info) == -1) return -1;
-		if (__ram_info(info) == -1) return -1;
-		if (__hdd_info(info) == -1) return -1;
-
-		return 0;
-	}
 #endif
 
 
@@ -321,19 +309,21 @@ static int __hdd_info(struct corinfo* info);
 
 		return 0;
 	}
-
-	int corinfo_GetInfo(struct corinfo* info)
-	{
-		if (info == NULL) return -1;
-		*info = (struct corinfo) { 0 };
-
-		if (__cpu_info(info) == -1) return -1;
-		if (__ram_info(info) == -1) return -1;
-		if (__hdd_info(info) == -1) return -1;
-
-		return 0;
-	}
 #endif
+
+
+int corinfo_GetInfo(struct corinfo* info)
+{
+	if (info == NULL) return -1;
+	*info = (struct corinfo) { 0 };
+
+	if (__cpu_info(info) == -1) return -1;
+	if (__ram_info(info) == -1) return -1;
+	if (__hdd_info(info) == -1) return -1;
+
+	return 0;
+}
+
 
 #endif
 
