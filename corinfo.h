@@ -35,6 +35,10 @@
 	#include <unistd.h>
 #endif
 
+#ifdef _WIN32
+	#include <windows.h>
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -87,6 +91,12 @@ int corinfo_GetInfo(struct corinfo* info);
 	         : "a" (command), "c" (0));
 #endif
 
+#ifdef _WIN32
+	#ifdef _MSC_VER
+		// __cpuid(cpu, command) is actually defined in MSVC
+	#endif
+#endif
+
 static void __null_corinfo(struct corinfo* info);
 static void __vendor_string(int cpu[4], uint8_t* string);
 static void __brand_string(int cpu[4], uint8_t* string);
@@ -108,8 +118,6 @@ static void __extensions(int cpu[4], struct corinfo* info);
 		__brand_string(cpu, info->BrandString);
 		__extensions(cpu, info);
 
-		info->CpuCount = sysconf(_SC_NPROCESSORS_ONLN);
-
 		// /proc/cpuinfo reading is necessary for CPUs not implementing CPUID 0x16 code.
 		FILE* f = fopen("/proc/cpuinfo", "rb");
 		if (f == NULL) return -1;
@@ -117,12 +125,13 @@ static void __extensions(int cpu[4], struct corinfo* info);
 		char*   line = NULL;
 		size_t  line_length = 0;
 		ssize_t line_read = 0;
+		size_t  MHz;
 
 		while ((line_read = getline(&line, &line_length, f)) != -1)
 		{
 			if (memcmp(line, "cpu MHz", 7) == 0)
 			{
-				info->CpuFrequency = atoi(strchr(line, ':') + 2);
+				MHz = atoi(strchr(line, ':') + 2);
 				break;
 			}
 		}
@@ -130,6 +139,9 @@ static void __extensions(int cpu[4], struct corinfo* info);
 		if (line) free(line);
 
 		fclose(f);
+
+		info->CpuCount = sysconf(_SC_NPROCESSORS_ONLN);
+		info->CpuFrequency = MHz;
 
 		info->RamSize = sys.totalram / 1024;
 		info->RamFree = sys.freeram / 1024;
@@ -144,7 +156,49 @@ static void __extensions(int cpu[4], struct corinfo* info);
 #ifdef _WIN32
 	int corinfo_GetInfo(struct corinfo* info)
 	{
+		if (info == NULL) return -1;
+		__null_corinfo(info);
 
+		SYSTEM_INFO sys;
+		MEMORYSTATUSEX mem;
+		mem.dwLength = sizeof(mem);
+
+		GetSystemInfo(&sys);
+		GlobalMemoryStatusEx(&mem);
+
+		int cpu[4];
+		// CPUID 0x00 code returns in EAX maximum CPUID code and vendor string in EBX, EDX, ECX.
+		__cpuid(cpu, 0x00000000);
+		__vendor_string(cpu, info->VendorString);
+		__brand_string(cpu, info->BrandString);
+		__extensions(cpu, info);
+
+		// Some WinAPI hell.
+		wchar_t Buffer[_MAX_PATH];
+		DWORD BufSize = _MAX_PATH;
+		DWORD dwMHz = _MAX_PATH;
+		HKEY hKey;
+
+		long lError = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+			L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0, KEY_READ, &hKey);
+
+		if (lError != ERROR_SUCCESS)
+		{
+			FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, lError, 0, Buffer, _MAX_PATH, 0);
+			wprintf(Buffer);
+			return 0;
+		}
+
+		RegQueryValueEx(hKey, L"~MHz", NULL, NULL, (LPBYTE)&dwMHz, &BufSize);
+
+		info->CpuCount = sys.dwNumberOfProcessors;
+		info->CpuFrequency = dwMHz;
+
+		info->RamSize  = mem.ullTotalPhys / 1024;
+		info->RamFree  = mem.ullAvailPhys / 1024;
+		info->RamUsage = mem.dwMemoryLoad;
+
+		return 0;
 	}
 #endif
 
