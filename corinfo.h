@@ -32,6 +32,8 @@
 
 #ifdef __linux
 	#include <sys/sysinfo.h>
+	#include <sys/statvfs.h>
+	#include <sys/types.h>
 	#include <unistd.h>
 #endif
 
@@ -48,13 +50,15 @@
 * @file corinfo.h
 */
 
-struct corinfo
+struct corinfo_cpu
 {
-	uint32_t CpuCount;     //!< Number of CPU cores.
-	uint32_t CpuFrequency; //!< CPU frequency, in MHz.
+	uint32_t Count;     //!< Number of CPU cores.
+	uint32_t Frequency; //!< CPU frequency, in MHz.
+	uint32_t Family;
+	uint32_t Model;
 
-	uint8_t  VendorString[12];
-	uint8_t  BrandString[48];
+	uint8_t Vendor[12];
+	uint8_t Name[48];
 
 	uint8_t MMX;
 	uint8_t SSE;
@@ -63,10 +67,27 @@ struct corinfo
 	uint8_t SSE41;
 	uint8_t SSE42;
 	uint8_t AVX;
+};
 
-	uint32_t RamSize;   //!< Physical RAM size, in KB.
-	uint32_t RamFree;   //!< Available physical RAM size, in KB.
-	uint32_t RamUsage;  //!< A number between 0 and 100 that specifies the approximate percentage of physical memory that is in use.
+struct corinfo_ram
+{
+	uint64_t Total; //!< Physical RAM size, in KB.
+	uint64_t Free;  //!< Available physical RAM size, in KB.
+	uint32_t Usage; //!< A number between 0 and 100 that specifies the approximate percentage of physical memory that is in use.
+};
+
+struct corinfo_hdd
+{
+	uint64_t Total; //!< HDD size, in KB.
+	uint64_t Free;  //!< Available HDD size, in KB.
+	uint32_t Usage; //!< A number between 0 and 100 that specifies the approximate percentage of HDD memory that is in use.
+};
+
+struct corinfo
+{
+	struct corinfo_cpu Cpu;
+	struct corinfo_ram Ram;
+	struct corinfo_hdd Hdd;
 };
 
 /**
@@ -84,55 +105,69 @@ struct corinfo
 */
 int corinfo_GetInfo(struct corinfo* info);
 
-#ifdef __linux
-	#define __cpuid(cpu, command) \
-	        asm volatile \
-	        ("cpuid" : "=a" (cpu[0]), "=b" (cpu[1]), "=c" (cpu[2]), "=d" (cpu[3]) \
-	         : "a" (command), "c" (0));
-#endif
-
-#ifdef _WIN32
-	#ifdef _MSC_VER
-		// __cpuid(cpu, command) is actually defined in MSVC
-	#endif
-#endif
-
-static void __null_corinfo(struct corinfo* info);
-static void __vendor_string(int cpu[4], uint8_t* string);
-static void __brand_string(int cpu[4], uint8_t* string);
-static void __extensions(int cpu[4], struct corinfo* info);
+static int __cpu_info(struct corinfo* info);
+static int __ram_info(struct corinfo* info);
+static int __hdd_info(struct corinfo* info);
 
 #ifdef __linux
-	int corinfo_GetInfo(struct corinfo* info)
+	static char* skip_whitespace(char* str)
 	{
-		if (info == NULL) return -1;
-		__null_corinfo(info);
+		while (*str == ' ' || *str == '\n' || *str == '\t' || *str == '\r' || *str == '\f' || *str == '\v') str++;
+		return str;
+	}
 
-		struct sysinfo sys;
-		if (sysinfo(&sys) == -1) return -1;
+	int __cpu_info(struct corinfo* info)
+	{
+		info->Cpu.Count = sysconf(_SC_NPROCESSORS_ONLN);
 
-		int cpu[4];
-		// CPUID 0x00 code returns in EAX maximum CPUID code and vendor string in EBX, EDX, ECX.
-		__cpuid(cpu, 0x00000000);
-		__vendor_string(cpu, info->VendorString);
-		__brand_string(cpu, info->BrandString);
-		__extensions(cpu, info);
-
-		// /proc/cpuinfo reading is necessary for CPUs not implementing CPUID 0x16 code.
-		FILE* f = fopen("/proc/cpuinfo", "rb");
+		FILE* f = fopen("/proc/cpuinfo", "r");
 		if (f == NULL) return -1;
 
 		char*   line = NULL;
 		size_t  line_length = 0;
 		ssize_t line_read = 0;
-		size_t  MHz;
 
 		while ((line_read = getline(&line, &line_length, f)) != -1)
 		{
 			if (memcmp(line, "cpu MHz", 7) == 0)
 			{
-				MHz = atoi(strchr(line, ':') + 2);
-				break;
+				info->Cpu.Frequency = atoi(strchr(line, ':') + 1);
+			}
+
+			if (memcmp(line, "cpu family", 10) == 0)
+			{
+				info->Cpu.Family = atoi(strchr(line, ':') + 1);
+			}
+
+			if (memcmp(line, "model\t", 6) == 0)
+			{
+				info->Cpu.Model = atoi(strchr(line, ':') + 1);
+			}
+
+			if (memcmp(line, "vendor_id", 9) == 0)
+			{
+				memcpy(info->Cpu.Vendor, &line[line_read] - 13, 12);
+			}
+
+			if (memcmp(line, "model name", 10) == 0)
+			{
+				char* str = skip_whitespace(strchr(line, ':') + 1);
+				size_t len = strlen(str);
+				for (int i = 0; i < len; i++) if (str[i] == '\n') str[i] = ' ';
+				memcpy(info->Cpu.Name, str, len);
+			}
+
+			if (memcmp(line, "flags", 5) == 0)
+			{
+				char* str = strchr(line, ':') + 1;
+
+				info->Cpu.MMX   = strstr(str, " mmx")    != NULL;
+				info->Cpu.SSE   = strstr(str, " sse")    != NULL;
+				info->Cpu.SSE2  = strstr(str, " sse2")   != NULL;
+				info->Cpu.SSE3  = strstr(str, " ssse3")  != NULL;
+				info->Cpu.SSE41 = strstr(str, " sse4_1") != NULL;
+				info->Cpu.SSE42 = strstr(str, " sse4_2") != NULL;
+				info->Cpu.AVX   = strstr(str, " avx")    != NULL;
 			}
 		}
 
@@ -140,12 +175,49 @@ static void __extensions(int cpu[4], struct corinfo* info);
 
 		fclose(f);
 
-		info->CpuCount = sysconf(_SC_NPROCESSORS_ONLN);
-		info->CpuFrequency = MHz;
+		return 0;
+	}
 
-		info->RamSize = sys.totalram / 1024;
-		info->RamFree = sys.freeram / 1024;
-		info->RamUsage = 100 - (info->RamFree / (float)info->RamSize) * 100;
+	int __ram_info(struct corinfo* info)
+	{
+		struct sysinfo sys;
+		if (sysinfo(&sys) == -1) return -1;
+
+		info->Ram.Total = sys.totalram / 1024;
+		info->Ram.Free  = sys.freeram / 1024;
+
+		if (info->Ram.Total != 0)
+		{
+			info->Ram.Usage = 100 - (info->Ram.Free / (float)info->Ram.Total) * 100;
+		}
+
+		return 0;
+	}
+
+	int __hdd_info(struct corinfo* info)
+	{
+		struct statvfs hd;
+		if (statvfs("./", &hd) == -1) return -1;
+
+		info->Hdd.Total = hd.f_frsize * hd.f_blocks / 1024;
+		info->Hdd.Free  = hd.f_frsize * hd.f_bavail / 1024;
+
+		if (info->Hdd.Total != 0)
+		{
+			info->Hdd.Usage = 100 - (info->Hdd.Free / (double)info->Hdd.Total) * 100;
+		}
+
+		return 0;
+	}
+
+	int corinfo_GetInfo(struct corinfo* info)
+	{
+		if (info == NULL) return -1;
+		*info = (struct corinfo){0};
+
+		if (__cpu_info(info) == -1) return -1;
+		if (__ram_info(info) == -1) return -1;
+		if (__hdd_info(info) == -1) return -1;
 
 		return 0;
 	}
@@ -201,72 +273,6 @@ static void __extensions(int cpu[4], struct corinfo* info);
 		return 0;
 	}
 #endif
-
-
-void __null_corinfo(struct corinfo* info)
-{
-	info->CpuCount = 0;
-	info->CpuFrequency = 0;
-
-	for (int i = 0; i < 12; i++) info->VendorString[i] = 0;
-	for (int i = 0; i < 48; i++) info->BrandString[i]  = 0;
-
-	info->MMX   = 0;
-	info->SSE   = 0;
-	info->SSE2  = 0;
-	info->SSE3  = 0;
-	info->SSE41 = 0;
-	info->SSE42 = 0;
-	info->AVX   = 0;
-
-	info->RamSize  = 0;
-	info->RamFree  = 0;
-	info->RamUsage = 0;
-}
-
-void __vendor_string(int cpu[4], uint8_t* string)
-{
-	for (int i = 0; i < 4; i++)
-	{
-		string[i + 0] = (cpu[1] >> (i * 8)) & 0xFF;
-		string[i + 4] = (cpu[3] >> (i * 8)) & 0xFF;
-		string[i + 8] = (cpu[2] >> (i * 8)) & 0xFF;
-	}
-}
-
-void __brand_string(int cpu[4], uint8_t* string)
-{
-	int commands[3] = { 0x80000002, 0x80000003, 0x80000004 };
-	int offset = 0;
-
-	for (int i = 0; i < 3; i++)
-	{
-		__cpuid(cpu, commands[i]);
-		for (int j = 0; j < 4; j++)
-		{
-			string[offset + j + 0]  = (cpu[0] >> (j * 8)) & 0xFF;
-			string[offset + j + 4]  = (cpu[1] >> (j * 8)) & 0xFF;
-			string[offset + j + 8]  = (cpu[2] >> (j * 8)) & 0xFF;
-			string[offset + j + 12] = (cpu[3] >> (j * 8)) & 0xFF;
-		}
-
-		offset += 16;
-	}
-}
-
-void __extensions(int cpu[4], struct corinfo* info)
-{
-	__cpuid(cpu, 0x00000001);
-	info->MMX   = (cpu[3] >> 23) & 0x1;
-	info->SSE   = (cpu[3] >> 25) & 0x1;
-	info->SSE2  = (cpu[3] >> 26) & 0x1;
-	info->SSE3  = (cpu[2] >>  0) & 0x1;
-	info->SSE41 = (cpu[2] >> 19) & 0x1;
-	info->SSE42 = (cpu[2] >> 20) & 0x1;
-	info->AVX   = (cpu[2] >> 28) & 0x1;
-}
-
-#undef __cpuid
 
 #endif
 
