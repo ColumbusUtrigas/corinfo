@@ -37,6 +37,8 @@
 
 #ifdef _WIN32
 	#include <windows.h>
+	#include <Powrprof.h>
+	#pragma comment(lib, "Powrprof.lib")
 #endif
 
 #include <stdio.h>
@@ -161,10 +163,28 @@ static void __extensions(int cpu[4], struct corinfo* info);
 
 		SYSTEM_INFO sys;
 		MEMORYSTATUSEX mem;
+
+		struct
+		{
+			ULONG  Number;
+			ULONG  MaxMhz;
+			ULONG  CurrentMhz;
+			ULONG  MhzLimit;
+			ULONG  MaxIdleState;
+			ULONG  CurrentIdleState;
+		} PROCESSOR_POWER_INFORMATION, *PPI;
+
 		mem.dwLength = sizeof(mem);
 
 		GetSystemInfo(&sys);
 		GlobalMemoryStatusEx(&mem);
+
+		BYTE* buf = (BYTE*)malloc(sizeof(PROCESSOR_POWER_INFORMATION) * 4);
+		if (buf == NULL) return -1;
+
+		CallNtPowerInformation(ProcessorInformation, NULL, 0, buf, sizeof(PROCESSOR_POWER_INFORMATION) * sys.dwNumberOfProcessors);
+
+		PPI = buf;
 
 		int cpu[4];
 		// CPUID 0x00 code returns in EAX maximum CPUID code and vendor string in EBX, EDX, ECX.
@@ -173,30 +193,14 @@ static void __extensions(int cpu[4], struct corinfo* info);
 		__brand_string(cpu, info->BrandString);
 		__extensions(cpu, info);
 
-		// Some WinAPI hell.
-		wchar_t Buffer[_MAX_PATH];
-		DWORD BufSize = _MAX_PATH;
-		DWORD dwMHz = _MAX_PATH;
-		HKEY hKey;
-
-		long lError = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-			L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0, KEY_READ, &hKey);
-
-		if (lError != ERROR_SUCCESS)
-		{
-			FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, lError, 0, Buffer, _MAX_PATH, 0);
-			wprintf(Buffer);
-			return 0;
-		}
-
-		RegQueryValueEx(hKey, L"~MHz", NULL, NULL, (LPBYTE)&dwMHz, &BufSize);
-
 		info->CpuCount = sys.dwNumberOfProcessors;
-		info->CpuFrequency = dwMHz;
+		info->CpuFrequency = PPI->MaxMhz;
 
 		info->RamSize  = mem.ullTotalPhys / 1024;
 		info->RamFree  = mem.ullAvailPhys / 1024;
 		info->RamUsage = mem.dwMemoryLoad;
+
+		free(buf);
 
 		return 0;
 	}
