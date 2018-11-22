@@ -1,5 +1,5 @@
 /*
-* Part of corinfo, a library for obtaining CPU, RAM and GPU information.
+* Part of corinfo, a library for obtaining CPU, RAM, HDD and GPU information.
 * https://github.com/ColumbusUtrigas/corinfo
 *
 * Copyright (c) 2018 ColumbusUtrigas.
