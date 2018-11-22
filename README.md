@@ -1,5 +1,5 @@
 # corinfo
-One-file C library for obtaining CPU, RAM and GPU info
+One-file C library for obtaining CPU, RAM, HDD and GPU info
 
 The master hosted on github: https://github.com/ColumbusUtrigas/corinfo
 
