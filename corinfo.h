@@ -102,6 +102,7 @@ static void __extensions(int cpu[4], struct corinfo* info);
 		if (sysinfo(&sys) == -1) return -1;
 
 		int cpu[4];
+		// CPUID 0x00 code returns in EAX maximum CPUID code and vendor string in EBX, EDX, ECX.
 		__cpuid(cpu, 0x00000000);
 		__vendor_string(cpu, info->VendorString);
 		__brand_string(cpu, info->BrandString);
@@ -109,12 +110,13 @@ static void __extensions(int cpu[4], struct corinfo* info);
 
 		info->CpuCount = sysconf(_SC_NPROCESSORS_ONLN);
 
+		// /proc/cpuinfo reading is necessary for CPUs not implementing CPUID 0x16 code.
 		FILE* f = fopen("/proc/cpuinfo", "rb");
 		if (f == NULL) return -1;
 
-		char* line = NULL;
-		size_t line_length = 0;
-		size_t line_read = 0;
+		char*   line = NULL;
+		size_t  line_length = 0;
+		ssize_t line_read = 0;
 
 		while ((line_read = getline(&line, &line_length, f)) != -1)
 		{
