@@ -31,7 +31,7 @@
 #endif
 
 #if !defined(__GNUC__) && !defined(_MSC_VER)
-	#error Unsupported compiler
+	#error            9*Unsupported compiler
 #endif
 
 #ifdef __linux
@@ -122,12 +122,6 @@ static int __ram_info(struct corinfo* info);
 static int __hdd_info(struct corinfo* info);
 
 #ifdef __linux
-	static char* __skip_whitespace(char* str)
-	{
-		while (*str == ' ' || *str == '\n' || *str == '\t' || *str == '\r' || *str == '\f' || *str == '\v') str++;
-		return str;
-	}
-
 	int __cpu_info(struct corinfo* info)
 	{
 		info->Cpu.Count = sysconf(_SC_NPROCESSORS_ONLN);
