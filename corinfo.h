@@ -27,7 +27,11 @@
 #define CORINFO_H
 
 #if !defined(__linux) && !defined(_WIN32)
-	#error "Unsupported platform"
+	#error Unsupported platform
+#endif
+
+#if !defined(__GNUC__) && !defined(_MSC_VER)
+	#error Unsupported compiler
 #endif
 
 #ifdef __linux
@@ -41,6 +45,15 @@
 	#include <windows.h>
 	#include <Powrprof.h>
 	#pragma comment(lib, "Powrprof.lib")
+#endif
+
+#ifdef __GNUC__
+	#include <cpuid.h>
+	#define __corinfo_cpuid(cpu, cmd) __cpuid(cmd, cpu[0], cpu[1], cpu[2], cpu[3])
+#endif
+
+#ifdef _MSC_VER
+	#define __corinfo_cpuid(cpu, cmd) __cpuid(cpu, cmd)
 #endif
 
 #include <stdio.h>
@@ -109,7 +122,7 @@ static int __ram_info(struct corinfo* info);
 static int __hdd_info(struct corinfo* info);
 
 #ifdef __linux
-	static char* skip_whitespace(char* str)
+	static char* __skip_whitespace(char* str)
 	{
 		while (*str == ' ' || *str == '\n' || *str == '\t' || *str == '\r' || *str == '\f' || *str == '\v') str++;
 		return str;
@@ -122,6 +135,32 @@ static int __hdd_info(struct corinfo* info);
 		FILE* f = fopen("/proc/cpuinfo", "r");
 		if (f == NULL) return -1;
 
+		int cpu[4];
+
+		__corinfo_cpuid(cpu, 0x00000000);
+
+		for (int i = 0; i < 4; i++)
+		{
+			info->Cpu.Vendor[0 + i] = (cpu[1] >> (i * 8)) & 0xFF;
+			info->Cpu.Vendor[4 + i] = (cpu[3] >> (i * 8)) & 0xFF;
+			info->Cpu.Vendor[8 + i] = (cpu[2] >> (i * 8)) & 0xFF;
+		}
+
+		__corinfo_cpuid(cpu, 0x80000002); memcpy(info->Cpu.Name +  0, cpu, 16);
+		__corinfo_cpuid(cpu, 0x80000003); memcpy(info->Cpu.Name + 16, cpu, 16);
+		__corinfo_cpuid(cpu, 0x80000004); memcpy(info->Cpu.Name + 32, cpu, 16);
+
+		__corinfo_cpuid(cpu, 0x00000001);
+		info->Cpu.Family = ((cpu[0] >>  8) & 0xF) +  ((cpu[0] >> 20) & 0xF);
+		info->Cpu.Model  = ((cpu[0] >>  4) & 0xF) + (((cpu[0] >> 16) & 0xF) << 4);
+		info->Cpu.MMX    =  (cpu[3] >> 23) & 0x1;
+		info->Cpu.SSE    =  (cpu[3] >> 25) & 0x1;
+		info->Cpu.SSE2   =  (cpu[3] >> 26) & 0x1;
+		info->Cpu.SSE3   =  (cpu[2] >>  0) & 0x1;
+		info->Cpu.SSE41  =  (cpu[2] >> 19) & 0x1;
+		info->Cpu.SSE42  =  (cpu[2] >> 20) & 0x1;
+		info->Cpu.AVX    =  (cpu[2] >> 28) & 0x1;
+
 		char*   line = NULL;
 		size_t  line_length = 0;
 		ssize_t line_read = 0;
@@ -131,42 +170,7 @@ static int __hdd_info(struct corinfo* info);
 			if (memcmp(line, "cpu MHz", 7) == 0)
 			{
 				info->Cpu.Frequency = atoi(strchr(line, ':') + 1);
-			}
-
-			if (memcmp(line, "cpu family", 10) == 0)
-			{
-				info->Cpu.Family = atoi(strchr(line, ':') + 1);
-			}
-
-			if (memcmp(line, "model\t", 6) == 0)
-			{
-				info->Cpu.Model = atoi(strchr(line, ':') + 1);
-			}
-
-			if (memcmp(line, "vendor_id", 9) == 0)
-			{
-				memcpy(info->Cpu.Vendor, &line[line_read] - 13, 12);
-			}
-
-			if (memcmp(line, "model name", 10) == 0)
-			{
-				char* str = skip_whitespace(strchr(line, ':') + 1);
-				size_t len = strlen(str);
-				for (int i = 0; i < len; i++) if (str[i] == '\n') str[i] = ' ';
-				memcpy(info->Cpu.Name, str, len);
-			}
-
-			if (memcmp(line, "flags", 5) == 0)
-			{
-				char* str = strchr(line, ':') + 1;
-
-				info->Cpu.MMX   = strstr(str, " mmx")    != NULL;
-				info->Cpu.SSE   = strstr(str, " sse")    != NULL;
-				info->Cpu.SSE2  = strstr(str, " sse2")   != NULL;
-				info->Cpu.SSE3  = strstr(str, " ssse3")  != NULL;
-				info->Cpu.SSE41 = strstr(str, " sse4_1") != NULL;
-				info->Cpu.SSE42 = strstr(str, " sse4_2") != NULL;
-				info->Cpu.AVX   = strstr(str, " avx")    != NULL;
+				break;
 			}
 		}
 
@@ -222,7 +226,7 @@ static int __hdd_info(struct corinfo* info);
 
 		int cpu[4];
 
-		__cpuid(cpu, 0x00000000);
+		__corinfo_cpuid(cpu, 0x00000000);
 
 		for (int i = 0; i < 4; i++)
 		{
@@ -231,11 +235,11 @@ static int __hdd_info(struct corinfo* info);
 			info->Cpu.Vendor[8 + i] = (cpu[2] >> (i * 8)) & 0xFF;
 		}
 
-		__cpuid(cpu, 0x80000002); memcpy(info->Cpu.Name +  0, cpu, 16);
-		__cpuid(cpu, 0x80000003); memcpy(info->Cpu.Name + 16, cpu, 16);
-		__cpuid(cpu, 0x80000004); memcpy(info->Cpu.Name + 32, cpu, 16);
+		__corinfo_cpuid(cpu, 0x80000002); memcpy(info->Cpu.Name +  0, cpu, 16);
+		__corinfo_cpuid(cpu, 0x80000003); memcpy(info->Cpu.Name + 16, cpu, 16);
+		__corinfo_cpuid(cpu, 0x80000004); memcpy(info->Cpu.Name + 32, cpu, 16);
 
-		__cpuid(cpu, 0x00000001);
+		__corinfo_cpuid(cpu, 0x00000001);
 		info->Cpu.Family = ((cpu[0] >>  8) & 0xF) +  ((cpu[0] >> 20) & 0xF);
 		info->Cpu.Model  = ((cpu[0] >>  4) & 0xF) + (((cpu[0] >> 16) & 0xF) << 4);
 		info->Cpu.MMX    =  (cpu[3] >> 23) & 0x1;
@@ -320,6 +324,7 @@ int corinfo_GetInfo(struct corinfo* info)
 	return 0;
 }
 
+#undef __corinfo_cpuid
 
 #endif
 
