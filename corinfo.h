@@ -31,7 +31,7 @@
 #endif
 
 #if !defined(__GNUC__) && !defined(_MSC_VER)
-	#error            9*Unsupported compiler
+	#error Unsupported compiler
 #endif
 
 #ifdef __linux
