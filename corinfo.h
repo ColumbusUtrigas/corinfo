@@ -2,7 +2,7 @@
 * Part of corinfo, a library for obtaining CPU, RAM, HDD and GPU information.
 * https://github.com/ColumbusUtrigas/corinfo
 *
-* Copyright (c) 2018 ColumbusUtrigas.
+* Copyright (c) 2019 ColumbusUtrigas.
 * 
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -117,12 +117,12 @@ struct corinfo
 */
 int corinfo_GetInfo(struct corinfo* info);
 
-static int __cpu_info(struct corinfo* info);
-static int __ram_info(struct corinfo* info);
-static int __hdd_info(struct corinfo* info);
+int __corinfo_cpu_info(struct corinfo* info);
+int __corinfo_ram_info(struct corinfo* info);
+int __corinfo_hdd_info(struct corinfo* info);
 
 #ifdef __linux
-	int __cpu_info(struct corinfo* info)
+	int __corinfo_cpu_info(struct corinfo* info)
 	{
 		info->Cpu.Count = sysconf(_SC_NPROCESSORS_ONLN);
 
@@ -175,7 +175,7 @@ static int __hdd_info(struct corinfo* info);
 		return 0;
 	}
 
-	int __ram_info(struct corinfo* info)
+	int __corinfo_ram_info(struct corinfo* info)
 	{
 		struct sysinfo sys;
 		if (sysinfo(&sys) == -1) return -1;
@@ -191,7 +191,7 @@ static int __hdd_info(struct corinfo* info);
 		return 0;
 	}
 
-	int __hdd_info(struct corinfo* info)
+	int __corinfo_hdd_info(struct corinfo* info)
 	{
 		struct statvfs hd;
 		if (statvfs("./", &hd) == -1) return -1;
@@ -211,7 +211,7 @@ static int __hdd_info(struct corinfo* info);
 
 
 #ifdef _WIN32
-	int __cpu_info(struct corinfo* info)
+	int __corinfo_cpu_info(struct corinfo* info)
 	{
 		SYSTEM_INFO sys;
 		GetSystemInfo(&sys);
@@ -265,7 +265,7 @@ static int __hdd_info(struct corinfo* info);
 		return 0;
 	}
 
-	int __ram_info(struct corinfo* info)
+	int __corinfo_ram_info(struct corinfo* info)
 	{
 		MEMORYSTATUSEX mem;
 		mem.dwLength = sizeof(MEMORYSTATUSEX);
@@ -282,7 +282,7 @@ static int __hdd_info(struct corinfo* info);
 		return 0;
 	}
 
-	int __hdd_info(struct corinfo* info)
+	int __corinfo_hdd_info(struct corinfo* info)
 	{
 		ULARGE_INTEGER free_bytes_avail;
 		ULARGE_INTEGER total_bytes;
@@ -311,9 +311,9 @@ int corinfo_GetInfo(struct corinfo* info)
 	if (info == NULL) return -1;
 	*info = (struct corinfo) { 0 };
 
-	if (__cpu_info(info) == -1) return -1;
-	if (__ram_info(info) == -1) return -1;
-	if (__hdd_info(info) == -1) return -1;
+	if (__corinfo_cpu_info(info) == -1) return -1;
+	if (__corinfo_ram_info(info) == -1) return -1;
+	if (__corinfo_hdd_info(info) == -1) return -1;
 
 	return 0;
 }
