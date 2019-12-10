@@ -244,7 +244,7 @@ int __corinfo_hdd_info(struct corinfo* info);
 		info->Cpu.SSE42  =  (cpu[2] >> 20) & 0x1;
 		info->Cpu.AVX    =  (cpu[2] >> 28) & 0x1;
 
-		struct
+		struct PPIStruct
 		{
 			ULONG  Number;
 			ULONG  MaxMhz;
@@ -257,7 +257,7 @@ int __corinfo_hdd_info(struct corinfo* info);
 		BYTE* buf = (BYTE*)malloc(sizeof(PROCESSOR_POWER_INFORMATION) * 4);
 		if (buf == NULL) return -1;
 		CallNtPowerInformation(ProcessorInformation, NULL, 0, buf, sizeof(PROCESSOR_POWER_INFORMATION) * sys.dwNumberOfProcessors);
-		PPI = buf;
+		PPI = (PPIStruct*)buf;
 
 		if (PPI != NULL) info->Cpu.Frequency = PPI->MaxMhz;
 		if (buf) free(buf);
@@ -309,7 +309,7 @@ int __corinfo_hdd_info(struct corinfo* info);
 int corinfo_GetInfo(struct corinfo* info)
 {
 	if (info == NULL) return -1;
-	*info = (struct corinfo) { 0 };
+	memset(info, 0, sizeof(struct corinfo));
 
 	if (__corinfo_cpu_info(info) == -1) return -1;
 	if (__corinfo_ram_info(info) == -1) return -1;
