@@ -254,7 +254,7 @@ int __corinfo_hdd_info(struct corinfo* info);
 			ULONG  CurrentIdleState;
 		} PROCESSOR_POWER_INFORMATION, *PPI;
 
-		BYTE* buf = (BYTE*)malloc(sizeof(PROCESSOR_POWER_INFORMATION) * 4);
+		BYTE* buf = (BYTE*)malloc(sizeof(PROCESSOR_POWER_INFORMATION) * sys.dwNumberOfProcessors);
 		if (buf == NULL) return -1;
 		CallNtPowerInformation(ProcessorInformation, NULL, 0, buf, sizeof(PROCESSOR_POWER_INFORMATION) * sys.dwNumberOfProcessors);
 		PPI = (PPIStruct*)buf;
